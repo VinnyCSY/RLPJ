@@ -64,9 +64,11 @@ def _print_state(state, action_record):
     for _ in range(state['my_chips']):
         print('+', end='')
     print('')
-    for i in range(len(state['all_chips'])):
+    for i in range(1, len(state['all_chips'])):
+        print('Agent {}: '.format(i), end='')
         for _ in range(state['all_chips'][i]):
             print('+', end='')
+        print('')
     print('\n=========== Actions You Can Choose ===========')
     print(', '.join([str(index) + ': ' + action for index, action in enumerate(state['legal_actions'])]))
     print('')
