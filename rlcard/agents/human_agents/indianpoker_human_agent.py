@@ -1,74 +1,68 @@
-from rlcard.utils.utils import print_card
+''' Limit Hold 'em rule model
+'''
+import rlcard
+from rlcard.models.model import Model
+from rlcard.games.indianpoker.utils import evaluate_hand
 
-
-class HumanAgent(object):
-    ''' A human agent for No Limit Holdem. It can be used to play against trained models
+class IndianPokerRuleAgentV1(object):
+    ''' Limit Hold 'em Rule agent version 1
     '''
 
-    def __init__(self, num_actions):
-        ''' Initilize the human agent
-
-        Args:
-            num_actions (int): the size of the ouput action space
-        '''
+    def __init__(self):
         self.use_raw = True
-        self.num_actions = num_actions
 
     @staticmethod
     def step(state):
-        ''' Human agent will display the state and make decisions through interfaces
-
+        ''' Predict the action when given raw state. A simple rule-based AI.
         Args:
-            state (dict): A dictionary that represents the current state
+            state (dict): Raw state from the game
 
         Returns:
-            action (int): The action decided by human
+            action (str): Predicted action
         '''
-        _print_state(state['raw_obs'], state['action_record'])
-        action = int(input('>> You choose action (integer): '))
-        while action < 0 or action >= len(state['legal_actions']):
-            print('Action illegal...')
-            action = int(input('>> Re-choose action (integer): '))
-        return state['raw_legal_actions'][action]
+        legal_actions = state['raw_legal_actions']
+        state = state['raw_obs']
+        hand = state['hand']
+        public_cards = state['public_cards']
+        action = 'fold'
+        
+        import random
+        return random.choice(legal_actions)
 
     def eval_step(self, state):
-        ''' Predict the action given the curent state for evaluation. The same to step here.
+        ''' Step for evaluation. The same to step
+        '''
+        return self.step(state), []
 
-        Args:
-            state (numpy.array): an numpy array that represents the current state
+class IndianPokerRuleAgentV1(Model):
+    ''' Limitholdem Rule Model version 1
+    '''
+
+    def __init__(self):
+        ''' Load pretrained model
+        '''
+        env = rlcard.make('limit-holdem')
+
+        rule_agent = IndianPokerRuleAgentV1()
+        self.rule_agents = [rule_agent for _ in range(env.num_players)]
+
+    @property
+    def agents(self):
+        ''' Get a list of agents for each position in a the game
 
         Returns:
-            action (int): the action predicted (randomly chosen) by the random agent
+            agents (list): A list of agents
+
+        Note: Each agent should be just like RL agent with step and eval_step
+              functioning well.
         '''
-        return self.step(state), {}
+        return self.rule_agents
 
-def _print_state(state, action_record):
-    ''' Print out the state
+    @property
+    def use_raw(self):
+        ''' Indicate whether use raw state and action
 
-    Args:
-        state (dict): A dictionary of the raw state
-        action_record (list): A list of the historical actions
-    '''
-    _action_list = []
-    for i in range(1, len(action_record)+1):
-        if action_record[-i][0] == state['current_player']:
-            break
-        _action_list.insert(0, action_record[-i])
-    for pair in _action_list:
-        print('>> Player', pair[0], 'chooses', pair[1])
-
-    print('\n=============== Community Card ===============')
-    print_card(state['public_cards'])
-
-    print('=============  Player',state["current_player"],'- Hand   =============')
-    print_card(state['hand'])
-
-    print('===============     Chips      ===============')
-    print('In Pot:',state["pot"])
-    for i in range(len(state["stakes"])):
-        print('Agent {}: {}'.format(i, state["stakes"][i]))
-
-    print('\n=========== Actions You Can Choose ===========')
-    print(', '.join([str(index) + ': ' + str(action) for index, action in enumerate(state['legal_actions'])]))
-    print('')
-    print(state)
+        Returns:
+            use_raw (boolean): True if using raw state and action
+        '''
+        return True

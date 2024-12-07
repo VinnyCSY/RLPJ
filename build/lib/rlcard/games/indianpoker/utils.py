@@ -18,17 +18,24 @@ def compare_hands(hands):
     elif hands[1] == None:
         return [1, 0]
     '''
-    RANKS = 'A23456789TJQK'
-    hand_rank = []
-    all_players = [0]*len(hands) #all the players in this round, 0 for losing and 1 for winning or draw
+    hand_rank = [evaluate_hand(hand) for hand in hands]
 
-    for hand in hands:
-        if hand is None:
-            hand_rank.append(-1)
-        else:
-            rank = RANKS.index(hand[1])
-            hand_rank.append(rank)
-
-    all_players = [1 if i == max(hand_rank) else 0 for i in hand_rank]# potential winner are those with same max card_catagory
+    # all the players in this round, 0 for losing and 1 for winning or draw
+    all_players = [1 if i == max(hand_rank) else 0 for i in hand_rank]
 
     return all_players
+
+def evaluate_hand(hand):
+    '''
+    Evaluate rank of hand
+    Args:
+        hands(list): cards of those players with same highest hand_catagory.
+        e.g. hands = [['CT', 'ST', 'H9', 'B9', 'C2', 'C8', 'C7'], ['CJ', 'SJ', 'H9', 'B9', 'C2', 'C8', 'C7'], ['CT', 'ST', 'H9', 'B9', 'C2', 'C8', 'C7']]
+    Returns:
+        rank: scalar of evaluated rank score
+    '''
+    RANKS = 'A23456789TJQK'
+    if hand is None:
+        return -1
+    else:
+        return RANKS.index(hand[1])
