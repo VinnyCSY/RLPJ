@@ -61,6 +61,22 @@ def train(args):
                 save_path=args.log_dir,
                 save_every=args.save_every
             )
+
+    elif args.algorithm == 'a2c':
+        from rlcard.agents import A2CAgent
+        if args.load_checkpoint_path != "":
+            agent = A2CAgent.from_checkpoint(checkpoint=torch.load(args.load_checkpoint_path))
+        else:
+            agent = A2CAgent(
+                num_actions=env.num_actions,
+                state_shape=env.state_shape[0],
+                actor_mlp_layers=[64,64],
+                critic_mlp_layers=[64,64],
+                device=device,
+                save_path=args.log_dir,
+                save_every=args.save_every,
+            )
+
     agents = [agent]
     for _ in range(1, env.num_players):
         agents.append(RandomAgent(num_actions=env.num_actions))
@@ -131,6 +147,7 @@ if __name__ == '__main__':
         choices=[
             'dqn',
             'nfsp',
+            'a2c',
         ],
     )
     parser.add_argument(
@@ -146,7 +163,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--num_episodes',
         type=int,
-        default=5000,
+        default=10000,
     )
     parser.add_argument(
         '--num_eval_games',
@@ -173,7 +190,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--save_every",
         type=int,
-        default=-1)
+        default=1000)
 
     args = parser.parse_args()
 
