@@ -38,4 +38,4 @@ def evaluate_hand(hand):
     if hand is None:
         return -1
     else:
-        return RANKS.index(hand[1])
+        return RANKS.index(hand[0][1])

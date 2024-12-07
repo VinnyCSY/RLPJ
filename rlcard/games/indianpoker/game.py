@@ -79,6 +79,9 @@ class IndianPokerGame:
         for i in range(self.num_players):
             self.players[i].hand.append(self.dealer.deal_card())
 
+        # Initialize public cards
+        self.public_cards = []
+
         # Big blind and small blind
         s = (self.dealer_id + 1) % self.num_players
         b = (self.dealer_id + 2) % self.num_players
@@ -185,7 +188,6 @@ class IndianPokerGame:
         state['stakes'] = [self.players[i].remained_chips for i in range(self.num_players)]
         state['current_player'] = self.game_pointer
         state['pot'] = self.dealer.pot
-        state['stage'] = self.stage
         return state
 
     def step_back(self):

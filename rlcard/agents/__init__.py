@@ -12,6 +12,7 @@ if 'torch' in installed_packages:
 from rlcard.agents.cfr_agent import CFRAgent
 from rlcard.agents.human_agents.limit_holdem_human_agent import HumanAgent as LimitholdemHumanAgent
 from rlcard.agents.human_agents.nolimit_holdem_human_agent import HumanAgent as NolimitholdemHumanAgent
+from rlcard.agents.human_agents.indianpoker_human_agent import HumanAgent as IndianPokerHumanAgent
 from rlcard.agents.human_agents.leduc_holdem_human_agent import HumanAgent as LeducholdemHumanAgent
 from rlcard.agents.human_agents.blackjack_human_agent import HumanAgent as BlackjackHumanAgent
 from rlcard.agents.human_agents.uno_human_agent import HumanAgent as UnoHumanAgent
