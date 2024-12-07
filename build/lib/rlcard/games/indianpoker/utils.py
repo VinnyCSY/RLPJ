@@ -425,7 +425,6 @@ def compare_ranks(position, hands, winner):
     assert len(hands) == len(winner)
     RANKS = '23456789TJQKA'
     cards_figure_all_players = [None]*len(hands)  #cards without suit
-    import pdb; pdb.set_trace()
     for i, hand in enumerate(hands):
         if winner[i]:
             cards = hands[i].get_hand_five_cards()
@@ -543,7 +542,6 @@ def compare_hands(hands):
     '''
     hand_category = [] #such as high_card, straight_flush, etc
     all_players = [0]*len(hands) #all the players in this round, 0 for losing and 1 for winning or draw
-    import pdb; pdb.set_trace()
     if None in hands:
         fold_players = [i for i, j in enumerate(hands) if j is None]
         if len(fold_players) == len(all_players) - 1:
