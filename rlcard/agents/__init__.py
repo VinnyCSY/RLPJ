@@ -8,6 +8,7 @@ installed_packages = [r.decode().split('==')[0] for r in reqs.split()]
 if 'torch' in installed_packages:
     from rlcard.agents.dqn_agent import DQNAgent as DQNAgent
     from rlcard.agents.nfsp_agent import NFSPAgent as NFSPAgent
+    from rlcard.agents.a2c_agent import A2CAgent as A2CAgent
 
 from rlcard.agents.cfr_agent import CFRAgent
 from rlcard.agents.human_agents.limit_holdem_human_agent import HumanAgent as LimitholdemHumanAgent
