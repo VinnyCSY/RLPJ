@@ -64,6 +64,7 @@ if __name__ == '__main__':
             'blackjack',
             'leduc-holdem',
             'limit-holdem',
+            'indianpoker',
             'doudizhu',
             'mahjong',
             'no-limit-holdem',
