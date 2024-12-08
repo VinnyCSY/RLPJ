@@ -24,6 +24,11 @@ register(
 )
 
 register(
+    env_id='indianpoker',
+    entry_point='rlcard.envs.indianpoker:IndianPokerEnv',
+)
+
+register(
     env_id='leduc-holdem',
     entry_point='rlcard.envs.leducholdem:LeducholdemEnv'
 )

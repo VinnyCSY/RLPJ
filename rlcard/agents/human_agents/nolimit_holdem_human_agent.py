@@ -56,7 +56,6 @@ def _print_state(state, action_record):
         _action_list.insert(0, action_record[-i])
     for pair in _action_list:
         print('>> Player', pair[0], 'chooses', pair[1])
-
     print('\n=============== Community Card ===============')
     print_card(state['public_cards'])
 
