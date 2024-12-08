@@ -23,11 +23,30 @@ class LimitholdemRuleAgentV1(object):
         legal_actions = state['raw_legal_actions']
         state = state['raw_obs']
         hand = state['hand']
-        public_cards = state['public_cards']
+        rival_cards = state['rival_cards']
         action = 'fold'
         
-        import random
-        return random.choice(legal_actions)
+        # -1 if hand is your hand
+        rank = [evaluate_hand(hand) for hand in state['rival_cards']] 
+        if max(rank) > 8:
+            action = 'check'
+        elif max(rank) < 6:
+            action = 'raise'
+        else:
+            action = 'call'
+        
+        #return action
+        if action in legal_actions:
+            return action
+        else:
+            if action == 'raise':
+                return 'call'
+            if action == 'check':
+                return 'fold'
+            if action == 'call':
+                return 'raise'
+            else:
+                return action
 
     def eval_step(self, state):
         ''' Step for evaluation. The same to step

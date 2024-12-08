@@ -34,7 +34,7 @@ class IndianPokerGame:
         self.dealer = None
         self.players = None
         self.judger = None
-        self.public_cards = None
+        self.rival_cards = None
         self.game_pointer = None
         self.round = None
         self.round_counter = None
@@ -79,8 +79,9 @@ class IndianPokerGame:
         for i in range(self.num_players):
             self.players[i].hand.append(self.dealer.deal_card())
 
-        # Initialize public cards
-        self.public_cards = []
+        # Initialize rival cards: None if index is your card, cards of hand if it's other people's card
+        self.rival_cards = [[None if i==j else [c.get_index() for c in player.hand]
+                            for j, player in enumerate(self.players)] for i in range(self.num_players)]
 
         # Big blind and small blind
         s = (self.dealer_id + 1) % self.num_players
@@ -141,9 +142,9 @@ class IndianPokerGame:
             b = self.game_pointer
             r_c = self.round_counter
             d = deepcopy(self.dealer)
-            p = deepcopy(self.public_cards)
+            rv = deepcopy(self.rival_cards)
             ps = deepcopy(self.players)
-            self.history.append((r, b, r_c, d, p, ps))
+            self.history.append((r, b, r_c, d, rv, ps))
 
         # Then we proceed to the next round
         self.game_pointer = self.round.proceed_round(self.players, action)
@@ -184,7 +185,7 @@ class IndianPokerGame:
 
         chips = [self.players[i].in_chips for i in range(self.num_players)]
         legal_actions = self.get_legal_actions()
-        state = self.players[player_id].get_state(self.public_cards, chips, legal_actions)
+        state = self.players[player_id].get_state(self.rival_cards[player_id], chips, legal_actions)
         state['stakes'] = [self.players[i].remained_chips for i in range(self.num_players)]
         state['current_player'] = self.game_pointer
         state['pot'] = self.dealer.pot
@@ -198,7 +199,7 @@ class IndianPokerGame:
             (bool): True if the game steps back successfully
         """
         if len(self.history) > 0:
-            self.round, self.game_pointer, self.round_counter, self.dealer, self.public_cards, self.players = self.history.pop()
+            self.round, self.game_pointer, self.round_counter, self.dealer, self.rival_cards, self.players = self.history.pop()
             return True
         return False
 
@@ -235,7 +236,7 @@ class IndianPokerGame:
         Returns:
             (list): Each entry corresponds to the payoff of one player
         """
-        hands = [p.hand + self.public_cards if p.status in (PlayerStatus.ALIVE, PlayerStatus.ALLIN) else None for p in self.players]
+        hands = [p.hand if p.status in (PlayerStatus.ALIVE, PlayerStatus.ALLIN) else None for p in self.players]
         chips_payoffs = self.judger.judge_game(self.players, hands)
         return chips_payoffs
 

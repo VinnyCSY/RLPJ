@@ -58,11 +58,10 @@ class IndianPokerEnv(Env):
         legal_actions = OrderedDict({action.value: None for action in state['legal_actions']})
         extracted_state['legal_actions'] = legal_actions
 
-        public_cards = state['public_cards']
         hand = state['hand']
         my_chips = state['my_chips']
         all_chips = state['all_chips']
-        cards = public_cards + hand
+        cards = hand
         idx = [self.card2index[card] for card in cards]
         obs = np.zeros(54)
         obs[idx] = 1
@@ -110,7 +109,7 @@ class IndianPokerEnv(Env):
         '''
         state = {}
         state['chips'] = [self.game.players[i].in_chips for i in range(self.num_players)]
-        state['public_card'] = [c.get_index() for c in self.game.public_cards] if self.game.public_cards else None
+        state['rival_cards'] = self.game.rival_cards
         state['hand_cards'] = [[c.get_index() for c in self.game.players[i].hand] for i in range(self.num_players)]
         state['current_player'] = self.game.game_pointer
         state['legal_actions'] = self.game.get_legal_actions()

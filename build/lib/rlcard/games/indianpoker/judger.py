@@ -1,4 +1,4 @@
-from .utils import compare_hands
+from rlcard.games.indianpoker.utils import compare_hands
 import numpy as np
 
 

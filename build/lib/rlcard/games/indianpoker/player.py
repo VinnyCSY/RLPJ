@@ -26,7 +26,7 @@ class IndianPokerPlayer:
         self.in_chips = 0
         self.remained_chips = init_chips
     
-    def get_state(self, public_cards, all_chips, legal_actions):
+    def get_state(self, rival_cards, all_chips, legal_actions):
         """
         Encode the state for the player
 
@@ -39,7 +39,7 @@ class IndianPokerPlayer:
         """
         return {
             'hand': [c.get_index() for c in self.hand],
-            'public_cards': [c.get_index() for c in public_cards],
+            'rival_cards': rival_cards,
             'all_chips': all_chips,
             'my_chips': self.in_chips,
             'legal_actions': legal_actions

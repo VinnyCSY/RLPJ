@@ -39,10 +39,12 @@ while (True):
         for pair in _action_list:
             print('>> Player', pair[0], 'chooses', pair[1])
 
-    # Let's take a look at what the agent card is
-    print('=============     Random Agent    ============')
-    print_card(env.get_perfect_information()['hand_cards'][1])
-
+    # Let's take a look at what your card is
+    print('===============     Cards all Players    ===============')
+    for i, hands in enumerate(env.get_perfect_information()['hand_cards']):
+        print('=============  Player',i,'- Hand   =============')
+        print_card(hands)
+        
     print('===============     Result     ===============')
     if payoffs[0] > 0:
         print('You win {} chips!'.format(payoffs[0]))

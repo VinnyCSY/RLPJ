@@ -57,11 +57,11 @@ def _print_state(state, action_record):
     for pair in _action_list:
         print('>> Player', pair[0], 'chooses', pair[1])
 
-    print('\n=============== Community Card ===============')
-    print_card(state['public_cards'])
-
-    print('=============  Player',state["current_player"],'- Hand   =============')
-    print_card(state['hand'])
+    for i, rival_hand in enumerate(state['rival_cards']):
+        if rival_hand is None:
+            continue
+        print('==========  Rival Player',i,'- Hand   ==========')
+        print_card(rival_hand)
 
     print('===============     Chips      ===============')
     print('In Pot:',state["pot"])
