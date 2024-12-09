@@ -5,7 +5,7 @@ class HumanAgent(object):
     ''' A human agent for No Limit Holdem. It can be used to play against trained models
     '''
 
-    def __init__(self, num_actions):
+    def __init__(self, num_actions, chips=0):
         ''' Initilize the human agent
 
         Args:
@@ -13,6 +13,7 @@ class HumanAgent(object):
         '''
         self.use_raw = True
         self.num_actions = num_actions
+        # self.chips = chips
 
     @staticmethod
     def step(state):
@@ -25,7 +26,7 @@ class HumanAgent(object):
             action (int): The action decided by human
         '''
         _print_state(state['raw_obs'], state['action_record'])
-        action = int(input('>> You choose action (integer): '))
+        action = int(input('>> You choose action (integer) : '))
         while action < 0 or action >= len(state['legal_actions']):
             print('Action illegal...')
             action = int(input('>> Re-choose action (integer): '))

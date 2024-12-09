@@ -28,12 +28,35 @@ class IndianPokerEnv(Env):
         self.actions = Action
         self.state_shape = [[54] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
+        self.game_set = True
         # for raise_amount in range(1, self.game.init_chips+1):
         #     self.actions.append(raise_amount)
 
         with open(os.path.join(rlcard.__path__[0], 'games/limitholdem/card2index.json'), 'r') as file:
             self.card2index = json.load(file)
 
+    def reset(self, save_setting=False):
+        ''' Start a new game
+
+        Returns:
+            (tuple): Tuple containing:
+
+                (numpy.array): The begining state of the game
+                (int): The begining player
+        '''
+        if save_setting and not self.game_set:
+            state, game_pointer = self.game.continue_game()
+        else:
+            state, game_pointer = self.game.init_game()
+        self.game_set = False
+        self.action_recorder = []
+        return self._extract_state(state), game_pointer
+
+    def run(self, is_training=False, save_setting=False):
+        trajectories, payoffs = super().run(is_training, save_setting)
+        self.update(trajectories, payoffs)
+        return trajectories, payoffs
+    
     def _get_legal_actions(self):
         ''' Get all leagal actions
 
@@ -72,6 +95,7 @@ class IndianPokerEnv(Env):
         extracted_state['raw_obs'] = state
         extracted_state['raw_legal_actions'] = [a for a in state['legal_actions']]
         extracted_state['action_record'] = self.action_recorder
+        # TODO: extracted_state['pattern']
 
         return extracted_state
 
@@ -108,7 +132,7 @@ class IndianPokerEnv(Env):
             (dict): A dictionary of all the perfect information of the current state
         '''
         state = {}
-        state['chips'] = [self.game.players[i].in_chips for i in range(self.num_players)]
+        state['chips'] = [self.game.players[i].remained_chips for i in range(self.num_players)]
         state['rival_cards'] = self.game.rival_cards
         state['hand_cards'] = [[c.get_index() for c in self.game.players[i].hand] for i in range(self.num_players)]
         state['current_player'] = self.game.game_pointer
@@ -116,3 +140,8 @@ class IndianPokerEnv(Env):
         return state
 
 
+    def update(self, trajectories, payoffs):
+        '''
+        update env after the game finishes
+        '''
+        all_players, self.game_set = self.game.update(trajectories, payoffs)
