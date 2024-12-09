@@ -185,8 +185,8 @@ class IndianPokerEnv(Env):
         idx = [self.card2index[card] for card in cards]
         obs = np.zeros(54)
         obs[idx] = 1
-        obs[52] = float(my_chips)
-        obs[53] = float(max(all_chips))
+        obs[52] = float(my_chips) / DEFAULT_GAME_CONFIG['chips_for_each']
+        obs[53] = float(max(all_chips)) / DEFAULT_GAME_CONFIG['chips_for_each']
         extracted_state['obs'] = obs
 
         extracted_state['raw_obs'] = state

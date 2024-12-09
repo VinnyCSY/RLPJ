@@ -31,6 +31,12 @@ def train(args):
             'seed': args.seed,
         }
     )
+    eval_env = rlcard.make(
+        args.env,
+        config={
+            'seed': args.seed,
+        }
+    )
 
     # Initialize the agent and use random agents as opponents
     if args.algorithm == 'dqn':
@@ -80,7 +86,11 @@ def train(args):
     agents = [agent]
     for _ in range(1, env.num_players):
         agents.append(RandomAgent(num_actions=env.num_actions))
-    env.set_agents(agents)
+    if args.self_play:
+        env.set_agents([agent] * env.num_players)
+    else:
+        env.set_agents(agents)
+    eval_env.set_agents(agents)
 
     # Start training
     with Logger(args.log_dir) as logger:
@@ -98,15 +108,20 @@ def train(args):
             # Feed transitions into agent memory, and train the agent
             # Here, we assume that DQN always plays the first position
             # and the other players play randomly (if any)
-            for ts in trajectories[0]:
-                agent.feed(ts)
+            if args.self_play:
+                for traj in trajectories:
+                    for ts in traj:
+                        agent.feed(ts)
+            else:
+                for ts in trajectories[0]:
+                    agent.feed(ts)
 
             # Evaluate the performance. Play with random agents.
             if episode % args.evaluate_every == 0:
                 logger.log_performance(
                     episode,
                     tournament(
-                        env,
+                        eval_env,
                         args.num_eval_games,
                     )[0]
                 )
@@ -141,6 +156,13 @@ if __name__ == '__main__':
             'bridge',
         ],
     )
+
+    parser.add_argument(
+        '--self_play',
+        default=False,
+        action='store_true',
+    )
+
     parser.add_argument(
         '--algorithm',
         type=str,
