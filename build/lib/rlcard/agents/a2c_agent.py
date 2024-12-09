@@ -167,11 +167,9 @@ class A2CAgent(object):
         '''
         state_batch, action_batch, reward_batch, next_state_batch, done_batch, legal_actions_batch = self.memory.sample()
 
-        # calculate exact return
-        return_batch = np.zeros_like(reward_batch, dtype=float)
-        return_batch += reward_batch
-        for t in range(1, reward_batch.shape[0]):
-            return_batch[:-t] += reward_batch[t:] * (self.discount_factor ** t)
+        # calculate TD(0) return
+        return_batch = reward_batch + np.invert(done_batch).astype(np.float32) * self.discount_factor * \
+            self.critic.net(torch.from_numpy(next_state_batch).float().to(self.device)).detach().cpu().numpy()
 
         # update critic
         critic_loss = self.critic.update(state_batch, return_batch)
