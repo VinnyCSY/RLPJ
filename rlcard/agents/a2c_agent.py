@@ -391,6 +391,7 @@ class Actor(Estimator):
         batch_loss = (-log_probs * advantage_batch.detach()).mean()
 
         batch_loss.backward()
+        torch.nn.utils.clip_grad_value_(self.net.parameters(), clip_value=10.0)
         self.optimizer.step()
         batch_loss = batch_loss.item()
 
@@ -435,6 +436,7 @@ class Critic(Estimator):
         batch_loss = (return_batch - state_value_batch).pow(2).mean()
 
         batch_loss.backward()
+        torch.nn.utils.clip_grad_value_(self.net.parameters(), clip_value=10.0)
         self.optimizer.step()
         batch_loss = batch_loss.item()
 
