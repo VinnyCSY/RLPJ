@@ -141,13 +141,14 @@ def print_card(cards):
             suit2 = suit if rank in ['2', '3'] else ' '
             suit3 = suit if rank in ['8', '9', '1', 'J', 'Q', 'K'] else ' '
             suit4 = suit if rank in ['6', '7', '1', 'J', 'Q', 'K'] else ' '
-            suit5 = suit if rank in ['A', '3', '5', '7', '9'] else ' '
+            suit5 = suit if rank in ['A', '3', '5', '7', '9', 'J', 'K'] else ' '
+            suit6 = suit if rank in ['Q', 'K'] else ' '
             lines[0].append('┌─────────┐')
             lines[1].append('│{}{}       │'.format(rank, space))
             lines[2].append('│  {} {} {}  │'.format(suit1, suit2, suit1))
-            lines[3].append('│  {}   {}  │'.format(suit3, suit3))
+            lines[3].append('│  {} {} {}  │'.format(suit3, suit6, suit3))
             lines[4].append('│  {} {} {}  │'.format(suit4, suit5, suit4))
-            lines[5].append('│  {}   {}  │'.format(suit3, suit3))
+            lines[5].append('│  {} {} {}  │'.format(suit3, suit6, suit3))
             lines[6].append('│  {} {} {}  │'.format(suit1, suit2, suit1))
             lines[7].append('│       {}{}│'.format(space, rank))
             lines[8].append('└─────────┘')
