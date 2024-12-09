@@ -83,7 +83,7 @@ class IndianPokerRound:
             self.not_raise_num += 1
 
         elif action == Action.ALL_IN:
-            all_in_quantity = player.remained_chips
+            all_in_quantity = min([p.in_chips + p.remained_chips for p in players]) - player.in_chips # assume 2-men game
             self.raised[self.game_pointer] = all_in_quantity + self.raised[self.game_pointer]
             player.bet(chips=all_in_quantity)
 
@@ -153,10 +153,19 @@ class IndianPokerRound:
             if int(self.dealer.pot / 2) > player.remained_chips:
                 full_actions.remove(Action.RAISE_HALF_POT)
 
+            # if other people can't follow your raise, you don't need to raise
+            if self.not_playing_num==self.num_players-1:
+                in_chips = players[self.game_pointer-1].in_chips
+                if player.in_chips+player.remained_chips > in_chips:
+                    for a in [Action.RAISE_HALF_POT, Action.RAISE_POT, Action.ALL_IN]:
+                        if a in full_actions:
+                            full_actions.remove(a)
+
             # Can't raise if the total raise amount is leq than the max raise amount of this round
             # If raise by pot, there is no such concern
             if Action.RAISE_HALF_POT in full_actions and \
-                int(self.dealer.pot / 2) + self.raised[self.game_pointer] <= max(self.raised):
+                int(self.dealer.pot / 2) + self.raised[self.game_pointer] <= max(self.raised) and \
+                Action.RAISE_HALF_POT in full_actions:
                 full_actions.remove(Action.RAISE_HALF_POT)
 
         return full_actions

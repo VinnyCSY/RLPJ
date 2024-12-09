@@ -30,12 +30,13 @@ class IndianPokerPlayer:
         """
         Reset hands of player
         """
+        assert self.in_chips == 0, f"in_chips {self.in_chips}"
         self.hand = []
         self.in_chips = 0
         self.status = PlayerStatus.ALIVE
 
     
-    def update(self, payoff=True):
+    def update(self, payoff=0):
         """
         If no chips remained, fail to resume the game
         """
