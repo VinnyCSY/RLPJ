@@ -311,7 +311,7 @@ class IndianPokerGame:
             (int): current player's id
         """
         return self.game_pointer
-    def update(self, trajectories, payoffs):
+    def update(self, payoffs):
         '''
         Update the game according to the results
         Returns: 

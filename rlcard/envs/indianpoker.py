@@ -5,8 +5,10 @@ from collections import OrderedDict
 
 import rlcard
 from rlcard.envs import Env
+from rlcard.envs.utils import indianpoker_pattern as pattern
 from rlcard.games.indianpoker import Game
 from rlcard.games.indianpoker.round import Action
+from rlcard.games.indianpoker.utils import RANKS
 from rlcard.utils import print_card
 
 DEFAULT_GAME_CONFIG = {
@@ -31,6 +33,7 @@ class IndianPokerEnv(Env):
         self.action_shape = [None for _ in range(self.num_players)]
         
         self.prev_trajectories = None
+        self.pattern = np.zeros((self.num_players, self.num_players-1, len(RANKS), len(Action)))
         self.game_set = True
         self.save_setting = True
         self.print_setting = False
@@ -90,11 +93,13 @@ class IndianPokerEnv(Env):
         while not self.is_over():
             # start new game if done
             if self.game.is_over():
+                # analyze pattern each
                 trajectories = [[] for _ in range(self.num_players)]
                 state, player_id = self.reset()
 
                 # Loop to play the game
                 trajectories[player_id].append(state)
+                
 
             # Agent plays
             if not is_training:
@@ -113,14 +118,21 @@ class IndianPokerEnv(Env):
 
             # game is done
             if self.game.is_over():
+                # update payoffs
+                payoffs = self.get_payoffs()
+                
+                all_players, self.game_set = self.game.update(payoffs)
+                
                 # Add a final state to all the players
                 for player_id in range(self.num_players):
                     state = self.get_state(player_id)
                     trajectories[player_id].append(state)
-
-                # update payoffs
-                payoffs = self.get_payoffs()
-                self.update(trajectories, payoffs)
+                
+                # update trajectories, patterns
+                self.prev_trajectories = trajectories
+                
+                new_pattern = pattern(trajectories)
+                self.pattern += new_pattern
 
                 # print result if it's over
                 if self.print_setting:
@@ -141,7 +153,7 @@ class IndianPokerEnv(Env):
         if self.save_setting:
             return self.game_set
         return self.game.is_over() 
-    
+
     def _get_legal_actions(self):
         ''' Get all leagal actions
 
@@ -166,10 +178,10 @@ class IndianPokerEnv(Env):
         legal_actions = OrderedDict({action.value: None for action in state['legal_actions']})
         extracted_state['legal_actions'] = legal_actions
 
-        hand = state['hand']
+        hand = state['rival_cards']
         my_chips = state['my_chips']
         all_chips = state['all_chips']
-        cards = hand
+        cards = [x for x in hand if x is not None][0]
         idx = [self.card2index[card] for card in cards]
         obs = np.zeros(54)
         obs[idx] = 1
@@ -180,7 +192,9 @@ class IndianPokerEnv(Env):
         extracted_state['raw_obs'] = state
         extracted_state['raw_legal_actions'] = [a for a in state['legal_actions']]
         extracted_state['action_record'] = self.action_recorder
-        # TODO: extracted_state['pattern']
+
+        player_id = state['rival_cards'].index(None)
+        extracted_state['pattern'] = self.pattern[player_id]
 
         return extracted_state
 
@@ -211,13 +225,6 @@ class IndianPokerEnv(Env):
         return self.actions(action_id)
 
 
-    def update(self, trajectories, payoffs):
-        '''
-        update env after the game finishes
-        '''
-        self.prev_trajectories = trajectories
-        all_players, self.game_set = self.game.update(trajectories, payoffs)
-
     def print_result(self, payoffs):
         '''
         Print the result of the game if it's over
@@ -238,7 +245,9 @@ class IndianPokerEnv(Env):
         print('')
         for i, chips in enumerate(state_info['chips']):
             print('Agent {}: {}'.format(i, chips))
+        # print(self.pattern)
         input("Press any key to continue...")
+        
 
     def get_perfect_information(self):
         ''' Get the perfect information of the current state
