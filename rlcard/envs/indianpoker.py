@@ -28,6 +28,8 @@ class IndianPokerEnv(Env):
         self.actions = Action
         self.state_shape = [[54] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
+        
+        self.prev_trajectories = None
         self.game_set = True
         # for raise_amount in range(1, self.game.init_chips+1):
         #     self.actions.append(raise_amount)
@@ -144,4 +146,5 @@ class IndianPokerEnv(Env):
         '''
         update env after the game finishes
         '''
+        self.prev_trajectories = trajectories
         all_players, self.game_set = self.game.update(trajectories, payoffs)
