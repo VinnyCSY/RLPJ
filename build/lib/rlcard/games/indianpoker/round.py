@@ -164,8 +164,7 @@ class IndianPokerRound:
             # Can't raise if the total raise amount is leq than the max raise amount of this round
             # If raise by pot, there is no such concern
             if Action.RAISE_HALF_POT in full_actions and \
-                int(self.dealer.pot / 2) + self.raised[self.game_pointer] <= max(self.raised) and \
-                Action.RAISE_HALF_POT in full_actions:
+                int(self.dealer.pot / 2) + self.raised[self.game_pointer] <= max(self.raised):
                 full_actions.remove(Action.RAISE_HALF_POT)
 
         return full_actions

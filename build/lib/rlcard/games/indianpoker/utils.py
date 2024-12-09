@@ -1,5 +1,6 @@
 import numpy as np
 
+RANKS = 'A23456789TJQK'
 
 def compare_hands(hands):
     '''
@@ -24,7 +25,6 @@ def compare_hands(hands):
     all_players = [1 if i == max(hand_rank) else 0 for i in hand_rank]
 
     return all_players
-
 def evaluate_hand(hand):
     '''
     Evaluate rank of hand
@@ -34,7 +34,6 @@ def evaluate_hand(hand):
     Returns:
         rank: scalar of evaluated rank score
     '''
-    RANKS = 'A23456789TJQK'
     if hand is None:
         return -1
     else:
