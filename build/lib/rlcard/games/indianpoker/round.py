@@ -152,6 +152,17 @@ class IndianPokerRound:
 
             if int(self.dealer.pot / 2) > player.remained_chips:
                 full_actions.remove(Action.RAISE_HALF_POT)
+            
+            # if other people can't follow your raise, you don't need to raise
+            if self.not_playing_num==self.num_players-1:
+                in_chips = players[self.game_pointer-1].in_chips
+                if player.in_chips+player.remained_chips > in_chips:
+                    try:
+                        full_actions.remove(Action.RAISE_HALF_POT)
+                        full_actions.remove(Action.RAISE_POT)
+                        full_actions.remove(Action.ALL_IN)
+                    except ValueError:
+                        pass
 
             # Can't raise if the total raise amount is leq than the max raise amount of this round
             # If raise by pot, there is no such concern
