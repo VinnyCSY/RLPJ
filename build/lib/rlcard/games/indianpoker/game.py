@@ -67,6 +67,7 @@ class IndianPokerGame:
             raise ValueError
         
         # init: shuffle the deck and empty hands
+        self.dealer_id += 1
         self.dealer = Dealer(self.np_random)
         for i, player in enumerate(self.players):
             player.reset()
