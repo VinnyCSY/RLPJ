@@ -12,7 +12,7 @@ from rlcard.games.indianpoker import Round, Action
 
 
 class IndianPokerGame:
-    def __init__(self, allow_step_back=False, num_players=2):
+    def __init__(self, allow_step_back=True, num_players=2, init_chips=100):
         """Initialize the class no limit holdem Game"""
 
         self.np_random = np.random.RandomState()
@@ -22,7 +22,7 @@ class IndianPokerGame:
         self.big_blind = 2 * self.small_blind
 
         # config players
-        self.init_chips = [100] * num_players
+        self.init_chips = [init_chips] * num_players
         self.num_players = num_players
 
         # Raise amount
@@ -50,7 +50,59 @@ class IndianPokerGame:
         # must have num_players length
         self.init_chips = [game_config['chips_for_each']] * game_config["game_num_players"]
         self.dealer_id = game_config['dealer_id']
+    
+    def continue_game(self):
+        """
+        Initialize the game of not limit holdem
 
+        This version supports two-player no limit texas holdem
+
+        Returns:
+            (tuple): Tuple containing:
+
+                (dict): The first state of the game
+                (int): Current player's id
+        """
+        if self.dealer_id is None or self.dealer is None or self.players is None or self.judger is None:
+            raise ValueError
+        
+        # init: shuffle the deck and empty hands
+        self.dealer = Dealer(self.np_random)
+        for i, player in enumerate(self.players):
+            player.reset()
+
+        # Deal cards to each  player to prepare for the first round
+        for i in range(self.num_players):
+            self.players[i].hand.append(self.dealer.deal_card())
+
+        # Initialize rival cards: None if index is your card, cards of hand if it's other people's card
+        self.rival_cards = [[None if i==j else [c.get_index() for c in player.hand]
+                            for j, player in enumerate(self.players)] for i in range(self.num_players)]
+
+        # Big blind and small blind
+        s = (self.dealer_id + 1) % self.num_players
+        b = (self.dealer_id + 2) % self.num_players
+        self.players[b].bet(chips=self.big_blind)
+        self.players[s].bet(chips=self.small_blind)
+
+        # The player next to the big blind plays the first
+        self.game_pointer = (b + 1) % self.num_players
+
+        # Initialize a bidding round, in the first round, the big blind and the small blind needs to
+        # be passed to the round for processing.
+        self.round = Round(self.num_players, self.big_blind, dealer=self.dealer, np_random=self.np_random)
+
+        self.round.start_new_round(game_pointer=self.game_pointer, raised=[p.in_chips for p in self.players])
+
+        # Count the round. There are 1 round in each game.
+        self.round_counter = 0
+
+        # Save the history for stepping back to the last state.
+        self.history = []
+
+        state = self.get_state(self.game_pointer)
+
+        return state, self.game_pointer
     def init_game(self):
         """
         Initialize the game of not limit holdem
@@ -258,3 +310,17 @@ class IndianPokerGame:
             (int): current player's id
         """
         return self.game_pointer
+    def update(self, trajectories, payoffs):
+        '''
+        Update the game according to the results
+        Returns: 
+            results of player win/lose
+            game set
+        '''
+        all_players = []
+        for i, player in enumerate(self.players):
+            win = player.update(payoffs[i])
+            all_players.append(1 if win else 0)
+        
+        assert sum(all_players) > 0
+        return all_players, sum(all_players)==1

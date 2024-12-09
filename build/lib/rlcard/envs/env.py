@@ -30,7 +30,7 @@ class Env(object):
         # Game specific configurations
         # Currently only support blackjack、limit-holdem、no-limit-holdem
         # TODO support game configurations for all the games
-        supported_envs = ['blackjack', 'leduc-holdem', 'limit-holdem', 'no-limit-holdem']
+        supported_envs = ['blackjack', 'leduc-holdem', 'limit-holdem', 'no-limit-holdem', 'indianpoker']
         if self.name in supported_envs:
             _game_config = self.default_game_config.copy()
             for key in config:
@@ -49,7 +49,7 @@ class Env(object):
         self.seed(config['seed'])
 
 
-    def reset(self):
+    def reset(self, save_setting=False):
         ''' Start a new game
 
         Returns:
@@ -117,7 +117,7 @@ class Env(object):
         '''
         self.agents = agents
 
-    def run(self, is_training=False):
+    def run(self, is_training=False, save_setting=False):
         '''
         Run a complete game, either for evaluation or training RL agent.
 
@@ -134,7 +134,7 @@ class Env(object):
               The second dimension is for different transitions. The third dimension is for the contents of each transiton
         '''
         trajectories = [[] for _ in range(self.num_players)]
-        state, player_id = self.reset()
+        state, player_id = self.reset(save_setting)
 
         # Loop to play the game
         trajectories[player_id].append(state)
