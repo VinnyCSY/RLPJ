@@ -26,6 +26,24 @@ class IndianPokerPlayer:
         self.in_chips = 0
         self.remained_chips = init_chips
     
+    def reset(self):
+        """
+        Reset hands of player
+        """
+        self.hand = []
+        self.in_chips = 0
+        self.status = PlayerStatus.ALIVE
+
+    
+    def update(self, payoff=True):
+        """
+        If no chips remained, fail to resume the game
+        """
+        self.remained_chips += self.in_chips
+        self.remained_chips += payoff
+        self.in_chips = 0
+        return self.remained_chips > 0
+    
     def get_state(self, rival_cards, all_chips, legal_actions):
         """
         Encode the state for the player

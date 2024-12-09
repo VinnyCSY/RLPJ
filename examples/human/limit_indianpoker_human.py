@@ -22,7 +22,7 @@ print(">> Limit Hold'em random agent")
 while (True):
     print(">> Start a new game")
 
-    trajectories, payoffs = env.run(is_training=False)
+    trajectories, payoffs = env.run(is_training=False, save_setting=True)
     # If the human does not take the final action, we need to
     # print other players action
     if len(trajectories[0]) != 0:
@@ -53,5 +53,6 @@ while (True):
     else:
         print('You lose {} chips!'.format(-payoffs[0]))
     print('')
-
+    for i, chips in enumerate(env.get_perfect_information()['chips']):
+        print('Agent {}: {}'.format(i, chips))
     input("Press any key to continue...")
