@@ -7,6 +7,7 @@ import rlcard
 from rlcard.envs import Env
 from rlcard.games.indianpoker import Game
 from rlcard.games.indianpoker.round import Action
+from rlcard.utils import print_card
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
@@ -31,13 +32,21 @@ class IndianPokerEnv(Env):
         
         self.prev_trajectories = None
         self.game_set = True
+        self.save_setting = True
+        self.print_setting = False
         # for raise_amount in range(1, self.game.init_chips+1):
         #     self.actions.append(raise_amount)
 
         with open(os.path.join(rlcard.__path__[0], 'games/limitholdem/card2index.json'), 'r') as file:
             self.card2index = json.load(file)
 
-    def reset(self, save_setting=False):
+    def init_setting(self, save_setting, print_setting):
+        # save setting: True if you want to continue the game until ALL_IN / False if you want to reset the game when it's end
+        self.save_setting = save_setting
+        # print_setting: True if you want to print the game result(your card, chips)
+        self.print_setting = print_setting
+
+    def reset(self):
         ''' Start a new game
 
         Returns:
@@ -46,7 +55,7 @@ class IndianPokerEnv(Env):
                 (numpy.array): The begining state of the game
                 (int): The begining player
         '''
-        if save_setting and not self.game_set:
+        if self.save_setting and not self.game_set:
             state, game_pointer = self.game.continue_game()
         else:
             state, game_pointer = self.game.init_game()
@@ -54,10 +63,84 @@ class IndianPokerEnv(Env):
         self.action_recorder = []
         return self._extract_state(state), game_pointer
 
-    def run(self, is_training=False, save_setting=False):
-        trajectories, payoffs = super().run(is_training, save_setting)
-        self.update(trajectories, payoffs)
+    def run(self, is_training=False):
+        '''
+        Run a complete game, either for evaluation or training RL agent.
+
+        Args:
+            is_training (boolean): True if for training purpose.
+
+        Returns:
+            (tuple) Tuple containing:
+
+                (list): A list of trajectories generated from the environment.
+                (list): A list payoffs. Each entry corresponds to one player.
+
+        Note: The trajectories are 3-dimension list. The first dimension is for different players.
+              The second dimension is for different transitions. The third dimension is for the contents of each transiton
+        '''
+        if is_training:
+            self.print_setting = False
+
+        trajectories = [[] for _ in range(self.num_players)]
+        state, player_id = self.reset()
+
+        # Loop to play the game
+        trajectories[player_id].append(state)
+        while not self.is_over():
+            # start new game if done
+            if self.game.is_over():
+                trajectories = [[] for _ in range(self.num_players)]
+                state, player_id = self.reset()
+
+                # Loop to play the game
+                trajectories[player_id].append(state)
+
+            # Agent plays
+            if not is_training:
+                action, _ = self.agents[player_id].eval_step(state)
+            else:
+                action = self.agents[player_id].step(state)
+
+            # Environment steps
+            next_state, next_player_id = self.step(action, self.agents[player_id].use_raw)
+            # Save action
+            trajectories[player_id].append(action)
+
+            # Set the state and player
+            state = next_state
+            player_id = next_player_id
+
+            # game is done
+            if self.game.is_over():
+                # Add a final state to all the players
+                for player_id in range(self.num_players):
+                    state = self.get_state(player_id)
+                    trajectories[player_id].append(state)
+
+                # update payoffs
+                payoffs = self.get_payoffs()
+                self.update(trajectories, payoffs)
+
+                # print result if it's over
+                if self.print_setting:
+                    self.print_result(payoffs)
+
+            else:
+                trajectories[player_id].append(state)
+
+        
         return trajectories, payoffs
+    
+    def is_over(self):
+        ''' Check whether the curent game is over
+
+        Returns:
+            (boolean): True if current game is over
+        '''
+        if self.save_setting:
+            return self.game_set
+        return self.game.is_over() 
     
     def _get_legal_actions(self):
         ''' Get all leagal actions
@@ -127,6 +210,36 @@ class IndianPokerEnv(Env):
                 return Action.FOLD
         return self.actions(action_id)
 
+
+    def update(self, trajectories, payoffs):
+        '''
+        update env after the game finishes
+        '''
+        self.prev_trajectories = trajectories
+        all_players, self.game_set = self.game.update(trajectories, payoffs)
+
+    def print_result(self, payoffs):
+        '''
+        Print the result of the game if it's over
+        '''
+        state_info = self.get_perfect_information()
+        print('===============     Cards all Players    ===============')
+        for i, hands in enumerate(state_info['hand_cards']):
+            print('=============  Player',i,'- Hand   =============')
+            print_card(hands)
+            
+        print('===============     Result     ===============')
+        if payoffs[0] > 0:
+            print('You win {} chips!'.format(payoffs[0]))
+        elif payoffs[0] == 0:
+            print('It is a tie.')
+        else:
+            print('You lose {} chips!'.format(-payoffs[0]))
+        print('')
+        for i, chips in enumerate(state_info['chips']):
+            print('Agent {}: {}'.format(i, chips))
+        input("Press any key to continue...")
+
     def get_perfect_information(self):
         ''' Get the perfect information of the current state
 
@@ -140,11 +253,3 @@ class IndianPokerEnv(Env):
         state['current_player'] = self.game.game_pointer
         state['legal_actions'] = self.game.get_legal_actions()
         return state
-
-
-    def update(self, trajectories, payoffs):
-        '''
-        update env after the game finishes
-        '''
-        self.prev_trajectories = trajectories
-        all_players, self.game_set = self.game.update(trajectories, payoffs)
