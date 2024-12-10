@@ -13,8 +13,9 @@ from rlcard.utils import print_card
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
-        'chips_for_each': 30,
+        'chips_for_each': 100,
         'dealer_id': None,
+        'pattern_dim': 13*5,
         }
 
 class IndianPokerEnv(Env):
@@ -31,6 +32,7 @@ class IndianPokerEnv(Env):
         self.actions = Action
         self.state_shape = [[55] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
+        self.pattern_shape = [[DEFAULT_GAME_CONFIG['pattern_dim']] for _ in range(self.num_players)]
         
         self.prev_trajectories = None
         self.pattern = np.zeros((self.num_players, self.num_players-1, len(RANKS), len(Action)))
@@ -132,7 +134,7 @@ class IndianPokerEnv(Env):
                 self.prev_trajectories = trajectories
                 
                 new_pattern = pattern(trajectories)
-                self.pattern += new_pattern
+                self.pattern = 0.99 * self.pattern + new_pattern
 
                 # print result if it's over
                 if self.print_setting:
@@ -186,9 +188,9 @@ class IndianPokerEnv(Env):
         idx = [self.card2index[card] for card in cards]
         obs = np.zeros(55)
         obs[idx] = 1
-        obs[52] = (float(my_chips) / self.default_game_config['chips_for_each']) ** 0.5
-        obs[53] = (float(max(all_chips)) / self.default_game_config['chips_for_each']) ** 0.5
-        obs[54] = (float(my_stake) / self.default_game_config['chips_for_each']) ** 0.5
+        obs[52] = float(my_chips)
+        obs[53] = float(max(all_chips))
+        obs[54] = float(my_stake)
         extracted_state['obs'] = obs
 
         extracted_state['raw_obs'] = state
@@ -196,7 +198,10 @@ class IndianPokerEnv(Env):
         extracted_state['action_record'] = self.action_recorder
 
         player_id = state['rival_cards'].index(None)
-        extracted_state['pattern'] = self.pattern[player_id]
+        
+        # assume 2-men game
+        extracted_state['pattern'] = (self.pattern[player_id][0] / \
+            (self.pattern[player_id][0].sum(axis=0, keepdims=True) + 1e-8)).flatten()
 
         return extracted_state
 

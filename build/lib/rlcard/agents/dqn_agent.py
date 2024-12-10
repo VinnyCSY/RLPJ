@@ -54,6 +54,8 @@ class DQNAgent(object):
                  batch_size=32,
                  num_actions=2,
                  state_shape=None,
+                 pattern_shape=[None],
+                 use_pattern=False,
                  train_every=1,
                  mlp_layers=None,
                  learning_rate=0.00005,
@@ -95,6 +97,9 @@ class DQNAgent(object):
         self.batch_size = batch_size
         self.num_actions = num_actions
         self.train_every = train_every
+        self.state_shape = state_shape
+        self.pattern_shape = pattern_shape
+        self.use_pattern = use_pattern
 
         # Torch device
         if device is None:
@@ -112,9 +117,14 @@ class DQNAgent(object):
         self.epsilons = np.linspace(epsilon_start, epsilon_end, epsilon_decay_steps)
 
         # Create estimators
-        self.q_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=state_shape, \
+        if self.use_pattern:
+            assert len(state_shape) == len(pattern_shape)
+            obs_shape = [s_dim + p_dim for s_dim, p_dim in zip(state_shape, pattern_shape)]
+        else:
+            obs_shape = state_shape
+        self.q_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=obs_shape, \
             mlp_layers=mlp_layers, device=self.device)
-        self.target_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=state_shape, \
+        self.target_estimator = Estimator(num_actions=num_actions, learning_rate=learning_rate, state_shape=obs_shape, \
             mlp_layers=mlp_layers, device=self.device)
 
         # Create replay memory
@@ -124,6 +134,12 @@ class DQNAgent(object):
         self.save_path = save_path
         self.save_every = save_every
 
+    def preprocess_obs(self, state):
+        if self.use_pattern:
+            return np.concatenate((state['obs'], state['pattern']), axis=0)
+        else:
+            return state['obs']
+    
     def feed(self, ts):
         ''' Store data in to replay buffer and train the agent. There are two stages.
             In stage 1, populate the memory without training
@@ -133,7 +149,10 @@ class DQNAgent(object):
             ts (list): a list of 5 elements that represent the transition
         '''
         (state, action, reward, next_state, done) = tuple(ts)
-        self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
+        self.feed_memory(
+            self.preprocess_obs(state), action, reward, 
+            self.preprocess_obs(next_state), 
+            list(next_state['legal_actions'].keys()), done)
         self.total_t += 1
         tmp = self.total_t - self.replay_memory_init_size
         if tmp>=0 and tmp%self.train_every == 0:
@@ -186,8 +205,8 @@ class DQNAgent(object):
         Returns:
             q_values (numpy.array): a 1-d array where each entry represents a Q value
         '''
-        
-        q_values = self.q_estimator.predict_nograd(np.expand_dims(state['obs'], 0))[0]
+        obs = self.preprocess_obs(state)
+        q_values = self.q_estimator.predict_nograd(np.expand_dims(obs, 0))[0]
         masked_q_values = -np.inf * np.ones(self.num_actions, dtype=float)
         legal_actions = list(state['legal_actions'].keys())
         masked_q_values[legal_actions] = q_values[legal_actions]
@@ -265,6 +284,9 @@ class DQNAgent(object):
         return {
             'agent_type': 'DQNAgent',
             'q_estimator': self.q_estimator.checkpoint_attributes(),
+            'state_shape': self.state_shape,
+            'pattern_shape': self.pattern_shape,
+            'use_pattern': self.use_pattern,
             'memory': self.memory.checkpoint_attributes(),
             'total_t': self.total_t,
             'train_t': self.train_t,
@@ -302,7 +324,9 @@ class DQNAgent(object):
             epsilon_decay_steps=checkpoint['epsilon_decay_steps'],
             batch_size=checkpoint['batch_size'],
             num_actions=checkpoint['num_actions'], 
-            state_shape=checkpoint['q_estimator']['state_shape'],
+            state_shape=checkpoint['state_shape'],
+            pattern_shape=checkpoint['pattern_shape'],
+            use_pattern=checkpoint['use_pattern'],
             train_every=checkpoint['train_every'],
             mlp_layers=checkpoint['q_estimator']['mlp_layers'],
             learning_rate=checkpoint['q_estimator']['learning_rate'],
