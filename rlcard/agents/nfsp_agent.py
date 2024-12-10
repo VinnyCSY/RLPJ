@@ -33,6 +33,8 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
+DEBUG = os.environ['RL_PRINT_SETTING'] == 'True'
+
 class NFSPAgent(object):
     ''' An approximate clone of rlcard.agents.nfsp_agent that uses
     pytorch instead of tensorflow.  Note that this implementation
@@ -223,6 +225,8 @@ class NFSPAgent(object):
             action = np.random.choice(len(probs), p=probs)
             info = {}
             info['probs'] = {state['raw_legal_actions'][i]: float(probs[list(state['legal_actions'].keys())[i]]) for i in range(len(state['legal_actions']))}
+            if DEBUG:
+                print(f"Sampled action: {action}")
         else:
             raise ValueError("'evaluate_with' should be either 'average_policy' or 'best_response'.")
         return action, info
@@ -251,7 +255,13 @@ class NFSPAgent(object):
             log_action_probs = self.policy_network(info_state).cpu().numpy()
 
         action_probs = np.exp(log_action_probs)[0]
-
+        
+        if DEBUG:
+            print(f"DEBUG:")
+            print(f"Obs shape: {info_state.shape}")
+            print(f"Use pattern: {self._use_pattern}")
+            print(f"Action probs: {action_probs}")
+        
         return action_probs
 
     def _add_transition(self, state, probs):

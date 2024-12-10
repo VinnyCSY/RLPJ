@@ -37,6 +37,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done', 'legal_actions'])
 
+DEBUG = os.environ['RL_PRINT_SETTING'] == 'True'
 
 class DQNAgent(object):
     '''
@@ -194,6 +195,8 @@ class DQNAgent(object):
         info = {}
         info['values'] = {state['raw_legal_actions'][i]: float(q_values[list(state['legal_actions'].keys())[i]]) for i in range(len(state['legal_actions']))}
 
+        if DEBUG:
+            print(f"Best action: {best_action}")
         return best_action, info
 
     def predict(self, state):
@@ -210,7 +213,11 @@ class DQNAgent(object):
         masked_q_values = -np.inf * np.ones(self.num_actions, dtype=float)
         legal_actions = list(state['legal_actions'].keys())
         masked_q_values[legal_actions] = q_values[legal_actions]
-
+        if DEBUG:
+            print(f"DEBUG:")
+            print(f"Obs shape: {obs.shape}")
+            print(f"Use pattern: {self.use_pattern}")
+            print(f"Masked Q: {masked_q_values}")
         return masked_q_values
 
     def train(self):
