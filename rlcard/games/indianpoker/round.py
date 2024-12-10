@@ -83,7 +83,7 @@ class IndianPokerRound:
             self.not_raise_num += 1
 
         elif action == Action.ALL_IN:
-            all_in_quantity = min([p.in_chips + p.remained_chips for p in players]) - player.in_chips # assume 2-men game
+            all_in_quantity = player.remained_chips
             self.raised[self.game_pointer] = all_in_quantity + self.raised[self.game_pointer]
             player.bet(chips=all_in_quantity)
 

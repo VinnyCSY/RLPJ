@@ -13,7 +13,7 @@ from rlcard.utils import print_card
 
 DEFAULT_GAME_CONFIG = {
         'game_num_players': 2,
-        'chips_for_each': 100,
+        'chips_for_each': 30,
         'dealer_id': None,
         }
 
@@ -26,10 +26,10 @@ class IndianPokerEnv(Env):
         '''
         self.name = 'indian-poker'
         self.default_game_config = DEFAULT_GAME_CONFIG
-        self.game = Game()
+        self.game = Game(init_chips=DEFAULT_GAME_CONFIG['chips_for_each'])
         super().__init__(config)
         self.actions = Action
-        self.state_shape = [[54] for _ in range(self.num_players)]
+        self.state_shape = [[55] for _ in range(self.num_players)]
         self.action_shape = [None for _ in range(self.num_players)]
         
         self.prev_trajectories = None
@@ -181,12 +181,14 @@ class IndianPokerEnv(Env):
         hand = state['rival_cards']
         my_chips = state['my_chips']
         all_chips = state['all_chips']
+        my_stake = state['stakes'][state['current_player']]
         cards = [x for x in hand if x is not None][0]
         idx = [self.card2index[card] for card in cards]
-        obs = np.zeros(54)
+        obs = np.zeros(55)
         obs[idx] = 1
-        obs[52] = float(my_chips) / DEFAULT_GAME_CONFIG['chips_for_each']
-        obs[53] = float(max(all_chips)) / DEFAULT_GAME_CONFIG['chips_for_each']
+        obs[52] = (float(my_chips) / self.default_game_config['chips_for_each']) ** 0.5
+        obs[53] = (float(max(all_chips)) / self.default_game_config['chips_for_each']) ** 0.5
+        obs[54] = (float(my_stake) / self.default_game_config['chips_for_each']) ** 0.5
         extracted_state['obs'] = obs
 
         extracted_state['raw_obs'] = state
