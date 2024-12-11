@@ -18,7 +18,6 @@ env.set_agents([
     agent_0,
 ])
 env.init_setting(save_setting=True, print_setting=True)
-os.environ['RL_PRINT_SETTING'] = 'True'
 
 print(">> Limit Hold'em random agent")
 
