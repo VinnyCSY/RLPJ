@@ -38,7 +38,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done', 'legal_actions'])
 
-DEBUG = False
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
 
 class A2CAgent(object):
     '''
@@ -172,8 +172,8 @@ class A2CAgent(object):
         
         if DEBUG:
             print(f"DEBUG:")
-            print(f"Obs shape: {obs.shape}")
-            print(f"Use pattern: {self.use_pattern}")
+            print(f"- Obs shape: {obs.shape}")
+            print(f"- Use pattern: {self.use_pattern}")
 
         # actor
         action_idx, greedy_action_idx = self.actor.predict_nograd(obs, list(state['legal_actions'].keys()))
@@ -189,7 +189,7 @@ class A2CAgent(object):
         info['state_value'] = state_value
         
         if DEBUG:
-            print(f"Value: {state_value}")
+            print(f"- Value: {state_value}")
 
         return action, info
 
@@ -398,8 +398,8 @@ class Actor(Estimator):
         action_idx = np.random.choice(np.arange(self.num_actions), p = action_probs)
         greedy_action_idx = np.argmax(action_probs)
         if DEBUG:
-            print(f"Action probs: {action_probs}")
-            print(f"Sampled/best action: {action_idx} / {greedy_action_idx}")
+            print(f"- Action probs: {action_probs}")
+            print(f"- Sampled/best action: {action_idx} / {greedy_action_idx}")
         return action_idx, greedy_action_idx
 
     def update(self, state_batch, action_batch, advantage_batch):

@@ -33,7 +33,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
-DEBUG = False
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
 
 class NFSPAgent(object):
     ''' An approximate clone of rlcard.agents.nfsp_agent that uses
@@ -226,7 +226,7 @@ class NFSPAgent(object):
             info = {}
             info['probs'] = {state['raw_legal_actions'][i]: float(probs[list(state['legal_actions'].keys())[i]]) for i in range(len(state['legal_actions']))}
             if DEBUG:
-                print(f"Sampled action: {action}")
+                print(f"- Sampled action: {action}")
         else:
             raise ValueError("'evaluate_with' should be either 'average_policy' or 'best_response'.")
         return action, info
@@ -258,9 +258,9 @@ class NFSPAgent(object):
         
         if DEBUG:
             print(f"DEBUG:")
-            print(f"Obs shape: {info_state.shape}")
-            print(f"Use pattern: {self._use_pattern}")
-            print(f"Action probs: {action_probs}")
+            print(f"- Obs shape: {info_state.shape}")
+            print(f"- Use pattern: {self._use_pattern}")
+            print(f"- Action probs: {action_probs}")
         
         return action_probs
 
