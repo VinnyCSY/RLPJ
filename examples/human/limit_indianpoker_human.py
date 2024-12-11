@@ -2,6 +2,7 @@
 '''
 from rlcard.agents import RandomAgent
 
+import os
 import rlcard
 from rlcard import models
 from rlcard.agents import IndianPokerHumanAgent as HumanAgent

@@ -33,7 +33,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
-DEBUG = os.environ['RL_PRINT_SETTING'] == 'True'
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
 
 class NFSPAgent(object):
     ''' An approximate clone of rlcard.agents.nfsp_agent that uses

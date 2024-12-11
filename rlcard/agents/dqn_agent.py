@@ -37,7 +37,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done', 'legal_actions'])
 
-DEBUG = os.environ['RL_PRINT_SETTING'] == 'True'
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
 
 class DQNAgent(object):
     '''
