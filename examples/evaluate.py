@@ -50,9 +50,13 @@ def evaluate(args):
     env.set_agents(agents)
 
     # Evaluate
-    rewards = tournament(env, args.num_games)
+    rewards, stats = tournament(env, args.num_games)
     for position, reward in enumerate(rewards):
-        print(position, args.models[position], reward)
+        print(position, args.models[position])
+        if stats['games_total'] > 0:
+            print(f"\tepisode win:\t{stats['episodes_wins'][position]} / {stats['episodes_total']} ({stats['episodes_wins'][position] / stats['episodes_total']:.3f})")
+            print(f"\tgame win:\t{stats['games_wins'][position]} / {stats['games_total']} ({stats['games_wins'][position] / stats['games_total']:.3f})")
+        print(f"\tavg reward:\t{reward}")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("Evaluation example in RLCard")
