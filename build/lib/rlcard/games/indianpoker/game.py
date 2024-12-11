@@ -315,13 +315,15 @@ class IndianPokerGame:
         '''
         Update the game according to the results
         Returns: 
-            results of player win/lose
+            results of player win/lose the game
             game set
         '''
-        all_players = []
+        chips_remained = []
+        players_win = []
         for i, player in enumerate(self.players):
-            win = player.update(payoffs[i])
-            all_players.append(1 if win else 0)
+            players_win.append(1 if payoffs[i]>=0 else 0)
+            alive = player.update(payoffs[i])
+            chips_remained.append(1 if alive else 0)
         
-        assert sum(all_players) > 0
-        return all_players, sum(all_players)==1
+        assert sum(chips_remained) > 0
+        return players_win, sum(chips_remained)==1

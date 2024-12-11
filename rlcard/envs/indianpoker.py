@@ -39,6 +39,10 @@ class IndianPokerEnv(Env):
         self.game_set = True
         self.save_setting = True
         self.print_setting = False
+        self.game_wins = [0 for _ in range(self.num_players)] # last is for draw
+        self.all_chips_wins = [0 for _ in range(self.num_players)]
+        self.total_games = 0
+        self.total_episodes = 0
         # for raise_amount in range(1, self.game.init_chips+1):
         #     self.actions.append(raise_amount)
 
@@ -64,8 +68,10 @@ class IndianPokerEnv(Env):
             state, game_pointer = self.game.continue_game()
         else:
             state, game_pointer = self.game.init_game()
+            self.total_episodes += 1
         self.game_set = False
         self.action_recorder = []
+        self.total_games += 1
         return self._extract_state(state), game_pointer
 
     def run(self, is_training=False):
@@ -121,20 +127,7 @@ class IndianPokerEnv(Env):
             # game is done
             if self.game.is_over():
                 # update payoffs
-                payoffs = self.get_payoffs()
-                
-                all_players, self.game_set = self.game.update(payoffs)
-                
-                # Add a final state to all the players
-                for player_id in range(self.num_players):
-                    state = self.get_state(player_id)
-                    trajectories[player_id].append(state)
-                
-                # update trajectories, patterns
-                self.prev_trajectories = trajectories
-                
-                new_pattern = pattern(trajectories)
-                self.pattern = 0.99 * self.pattern + new_pattern
+                trajectories, payoffs = self.update(trajectories)
 
                 # print result if it's over
                 if self.print_setting:
@@ -231,6 +224,31 @@ class IndianPokerEnv(Env):
                 return Action.FOLD
         return self.actions(action_id)
 
+    def update(self, trajectories):
+        payoffs = self.get_payoffs()
+                
+        game_wins, self.game_set = self.game.update(payoffs)
+        
+        # Add a final state to all the players
+        for player_id in range(self.num_players):
+            state = self.get_state(player_id)
+            trajectories[player_id].append(state)
+        
+        # update trajectories
+        self.prev_trajectories = trajectories
+        
+        # update patterns
+        new_pattern = pattern(trajectories)
+        self.pattern = 0.99 * self.pattern + new_pattern
+
+        # update player wins
+        self.game_wins = [x + y for x, y in zip(self.game_wins, game_wins)]
+
+        if self.game_set:
+            assert sum(game_wins)==1
+            self.all_chips_wins = [x + y for x, y in zip(self.all_chips_wins, game_wins)]
+
+        return trajectories, payoffs
 
     def print_result(self, payoffs):
         '''
@@ -253,6 +271,8 @@ class IndianPokerEnv(Env):
         for i, chips in enumerate(state_info['chips']):
             print('Agent {}: {}'.format(i, chips))
         # print(self.pattern)
+        print(f"Total {self.total_games} games: {self.game_wins}")
+        print(f"Total {self.total_episodes} episodes: {self.all_chips_wins}")
         input("Press any key to continue...")
         
 
