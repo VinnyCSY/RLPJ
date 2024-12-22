@@ -1,7 +1,12 @@
 ''' A toy example of playing against pretrianed AI on Leduc Hold'em
 '''
+import os
+os.environ['RL_PRINT_SETTING'] = 'True'
+print(f"DDDD: {os.environ.get('RL_PRINT_SETTING', 'FALSE')}")
+
 from rlcard.agents import RandomAgent
 
+import os
 import rlcard
 from rlcard import models
 from rlcard.agents import IndianPokerHumanAgent as HumanAgent

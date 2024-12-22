@@ -214,9 +214,15 @@ def tournament(env, num):
         A list of avrage payoffs for each player
     '''
     payoffs = [0 for _ in range(env.num_players)]
+    stats = {
+        'games_total': 0,
+        'games_wins': [0 for _ in range(env.num_players)],
+        'episodes_total': 0,
+        'episodes_wins': [0 for _ in range(env.num_players)],
+    }
     counter = 0
     while counter < num:
-        _, _payoffs = env.run(is_training=False)
+        _, _payoffs, _stats = env.run(is_training=False)
         if isinstance(_payoffs, list):
             for _p in _payoffs:
                 for i, _ in enumerate(payoffs):
@@ -226,9 +232,15 @@ def tournament(env, num):
             for i, _ in enumerate(payoffs):
                 payoffs[i] += _payoffs[i]
             counter += 1
+        if _stats is not None:
+            stats['games_total'] = _stats['games_total']
+            stats['episodes_total'] = _stats['episodes_total']
+            for i in range(env.num_players):
+                stats['games_wins'][i] = _stats['games_wins'][i]
+                stats['episodes_wins'][i] = _stats['episodes_wins'][i]
     for i, _ in enumerate(payoffs):
         payoffs[i] /= counter
-    return payoffs
+    return payoffs, stats
 
 def plot_curve(csv_path, save_path, algorithm):
     ''' Read data from csv file and plot the results

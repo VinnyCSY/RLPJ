@@ -166,7 +166,13 @@ class Env(object):
         # Payoffs
         payoffs = self.get_payoffs()
 
-        return trajectories, payoffs
+        # Win/Lose stats
+        try:
+            stats = self.get_stats()
+        except NotImplementedError:
+            stats = None
+
+        return trajectories, payoffs, stats
 
     def is_over(self):
         ''' Check whether the curent game is over
@@ -204,6 +210,9 @@ class Env(object):
 
         Note: Must be implemented in the child class.
         '''
+        raise NotImplementedError
+    
+    def get_stats(self):
         raise NotImplementedError
 
     def get_perfect_information(self):

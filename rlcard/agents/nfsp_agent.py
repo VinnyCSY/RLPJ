@@ -33,6 +33,8 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = collections.namedtuple('Transition', 'info_state action_probs')
 
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
+
 class NFSPAgent(object):
     ''' An approximate clone of rlcard.agents.nfsp_agent that uses
     pytorch instead of tensorflow.  Note that this implementation
@@ -44,6 +46,8 @@ class NFSPAgent(object):
     def __init__(self,
                  num_actions=4,
                  state_shape=None,
+                 pattern_shape=[None],
+                 use_pattern=False,
                  hidden_layers_sizes=None,
                  reservoir_buffer_capacity=20000,
                  anticipatory_param=0.1,
@@ -108,6 +112,9 @@ class NFSPAgent(object):
         self._prev_action = None
         self.evaluate_with = evaluate_with
 
+        self._pattern_shape = pattern_shape
+        self._use_pattern = use_pattern
+
         if device is None:
             self.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         else:
@@ -122,7 +129,7 @@ class NFSPAgent(object):
         # Build the action-value network
         self._rl_agent = DQNAgent(q_replay_memory_size, q_replay_memory_init_size, \
             q_update_target_estimator_every, q_discount_factor, q_epsilon_start, q_epsilon_end, \
-            q_epsilon_decay_steps, q_batch_size, num_actions, state_shape, q_train_every, q_mlp_layers, \
+            q_epsilon_decay_steps, q_batch_size, num_actions, state_shape, pattern_shape, use_pattern, q_train_every, q_mlp_layers, \
             rl_learning_rate, device)
 
         # Build the average policy supervised model
@@ -137,9 +144,13 @@ class NFSPAgent(object):
     def _build_model(self):
         ''' Build the average policy network
         '''
-
+        if self._use_pattern:
+            assert len(self._state_shape) == len(self._pattern_shape)
+            obs_shape = [s_dim + p_dim for s_dim, p_dim in zip(self._state_shape, self._pattern_shape)]
+        else:
+            obs_shape = self._state_shape
         # configure the average policy network
-        policy_network = AveragePolicyNetwork(self._num_actions, self._state_shape, self._layer_sizes)
+        policy_network = AveragePolicyNetwork(self._num_actions, obs_shape, self._layer_sizes)
         policy_network = policy_network.to(self.device)
         self.policy_network = policy_network
         self.policy_network.eval()
@@ -152,6 +163,12 @@ class NFSPAgent(object):
         # configure optimizer
         self.policy_network_optimizer = torch.optim.Adam(self.policy_network.parameters(), lr=self._sl_learning_rate)
 
+    def preprocess_obs(self, state):
+        if self._use_pattern:
+            return np.concatenate((state['obs'], state['pattern']), axis=0)
+        else:
+            return state['obs']
+    
     def feed(self, ts):
         ''' Feed data to inner RL agent
 
@@ -173,7 +190,7 @@ class NFSPAgent(object):
         Returns:
             action (int): An action id
         '''
-        obs = state['obs']
+        obs = self.preprocess_obs(state)
         legal_actions = list(state['legal_actions'].keys())
         if self._mode == 'best_response':
             action = self._rl_agent.step(state)
@@ -201,13 +218,15 @@ class NFSPAgent(object):
         if self.evaluate_with == 'best_response':
             action, info = self._rl_agent.eval_step(state)
         elif self.evaluate_with == 'average_policy':
-            obs = state['obs']
+            obs = self.preprocess_obs(state)
             legal_actions = list(state['legal_actions'].keys())
             probs = self._act(obs)
             probs = remove_illegal(probs, legal_actions)
             action = np.random.choice(len(probs), p=probs)
             info = {}
             info['probs'] = {state['raw_legal_actions'][i]: float(probs[list(state['legal_actions'].keys())[i]]) for i in range(len(state['legal_actions']))}
+            if DEBUG:
+                print(f"- Sampled action: {action}")
         else:
             raise ValueError("'evaluate_with' should be either 'average_policy' or 'best_response'.")
         return action, info
@@ -236,7 +255,13 @@ class NFSPAgent(object):
             log_action_probs = self.policy_network(info_state).cpu().numpy()
 
         action_probs = np.exp(log_action_probs)[0]
-
+        
+        if DEBUG:
+            print(f"DEBUG:")
+            print(f"- Obs shape: {info_state.shape}")
+            print(f"- Use pattern: {self._use_pattern}")
+            print(f"- Action probs: {action_probs}")
+        
         return action_probs
 
     def _add_transition(self, state, probs):
@@ -314,6 +339,9 @@ class NFSPAgent(object):
             'agent_type': 'NFSPAgent',
             'policy_network': self.policy_network.checkpoint_attributes(),
             'reservoir_buffer': self._reservoir_buffer.checkpoint_attributes(),
+            'state_shape': self._state_shape,
+            'pattern_shape': self._pattern_shape,
+            'use_pattern': self._use_pattern,
             'rl_agent': self._rl_agent.checkpoint_attributes(),
             'policy_network_optimizer': self.policy_network_optimizer.state_dict(),
             'device': self.device,
@@ -348,7 +376,9 @@ class NFSPAgent(object):
             evaluate_with=checkpoint['evaluate_with'],
             device=checkpoint['device'],
             q_mlp_layers=checkpoint['rl_agent']['q_estimator']['mlp_layers'],
-            state_shape=checkpoint['rl_agent']['q_estimator']['state_shape'],
+            state_shape=checkpoint['state_shape'],
+            pattern_shape=checkpoint['pattern_shape'],
+            use_pattern=checkpoint['use_pattern'],
             hidden_layers_sizes=[],
         )
         

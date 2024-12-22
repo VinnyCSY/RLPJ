@@ -38,6 +38,7 @@ from rlcard.utils.utils import remove_illegal
 
 Transition = namedtuple('Transition', ['state', 'action', 'reward', 'next_state', 'done', 'legal_actions'])
 
+DEBUG = os.environ.get('RL_PRINT_SETTING', 'False') == 'True'
 
 class A2CAgent(object):
     '''
@@ -48,6 +49,8 @@ class A2CAgent(object):
                  discount_factor=0.99,
                  num_actions=2,
                  state_shape=None,
+                 pattern_shape=[None],
+                 use_pattern=False,
                  train_every=1,
                  actor_mlp_layers=None,
                  critic_mlp_layers=None,
@@ -80,6 +83,9 @@ class A2CAgent(object):
         self.num_actions = num_actions
         self.train_every = train_every
         self.eval_with = eval_with
+        self.state_shape = state_shape
+        self.pattern_shape = pattern_shape
+        self.use_pattern = use_pattern
 
         # Torch device
         if device is None:
@@ -94,12 +100,17 @@ class A2CAgent(object):
         self.train_t = 0
 
         # Create estimators
+        if self.use_pattern:
+            assert len(state_shape) == len(pattern_shape)
+            obs_shape = [s_dim + p_dim for s_dim, p_dim in zip(state_shape, pattern_shape)]
+        else:
+            obs_shape = state_shape
         self.actor = Actor(
-            num_actions=num_actions, learning_rate=learning_rate, state_shape=state_shape, 
+            num_actions=num_actions, learning_rate=learning_rate, state_shape=obs_shape, 
             mlp_layers=actor_mlp_layers, device=self.device
         )
         self.critic = Critic(
-            num_actions=1, learning_rate=learning_rate, state_shape=state_shape,
+            num_actions=1, learning_rate=learning_rate, state_shape=obs_shape,
             mlp_layers=critic_mlp_layers, device=self.device
         )
 
@@ -109,7 +120,13 @@ class A2CAgent(object):
         # Checkpoint saving parameters
         self.save_path = save_path
         self.save_every = save_every
-
+    
+    def preprocess_obs(self, state):
+        if self.use_pattern:
+            return np.concatenate((state['obs'], state['pattern']), axis=0)
+        else:
+            return state['obs']
+    
     def feed(self, ts):
         ''' Store data in to replay buffer and train the agent. There are two stages.
             In stage 1, populate the memory without training
@@ -119,9 +136,12 @@ class A2CAgent(object):
             ts (list): a list of 5 elements that represent the transition
         '''
         (state, action, reward, next_state, done) = tuple(ts)
-        self.feed_memory(state['obs'], action, reward, next_state['obs'], list(next_state['legal_actions'].keys()), done)
+        self.feed_memory(
+            self.preprocess_obs(state), action, reward, 
+            self.preprocess_obs(next_state), 
+            list(next_state['legal_actions'].keys()), done)
         self.total_t += 1
-        if done:
+        if done and len(self.memory) > 10:
             self.train()
 
     def step(self, state):
@@ -134,7 +154,8 @@ class A2CAgent(object):
         Returns:
             action (int): an action id
         '''
-        action_idx, _ = self.actor.predict_nograd(state['obs'], list(state['legal_actions'].keys()))
+        obs = self.preprocess_obs(state)
+        action_idx, _ = self.actor.predict_nograd(obs, list(state['legal_actions'].keys()))
         return action_idx
 
     def eval_step(self, state):
@@ -147,18 +168,28 @@ class A2CAgent(object):
             action (int): an action id
             info (dict): A dictionary containing information
         '''
+        obs = self.preprocess_obs(state)
+        
+        if DEBUG:
+            print(f"DEBUG:")
+            print(f"- Obs shape: {obs.shape}")
+            print(f"- Use pattern: {self.use_pattern}")
+
         # actor
-        action_idx, greedy_action_idx = self.actor.predict_nograd(state['obs'], list(state['legal_actions'].keys()))
+        action_idx, greedy_action_idx = self.actor.predict_nograd(obs, list(state['legal_actions'].keys()))
         if self.eval_with == "stochastic":
             action = action_idx
         else:
             action = greedy_action_idx
 
         # critic
-        state_value = self.critic.predict_nograd(state['obs'])
+        state_value = self.critic.predict_nograd(obs)
                 
         info = {}
         info['state_value'] = state_value
+        
+        if DEBUG:
+            print(f"- Value: {state_value}")
 
         return action, info
 
@@ -223,6 +254,9 @@ class A2CAgent(object):
             'agent_type': 'A2CAgent',
             'actor': self.actor.checkpoint_attributes(),
             'critic': self.critic.checkpoint_attributes(),
+            'state_shape': self.state_shape,
+            'pattern_shape': self.pattern_shape,
+            'use_pattern': self.use_pattern,
             'memory': self.memory.checkpoint_attributes(),
             'total_t': self.total_t,
             'train_t': self.train_t,
@@ -248,7 +282,9 @@ class A2CAgent(object):
         agent_instance = cls(
             discount_factor=checkpoint['discount_factor'],
             num_actions=checkpoint['num_actions'], 
-            state_shape=checkpoint['actor']['state_shape'],
+            state_shape=checkpoint['state_shape'],
+            pattern_shape=checkpoint['pattern_shape'],
+            use_pattern=checkpoint['use_pattern'],
             train_every=checkpoint['train_every'],
             actor_mlp_layers=checkpoint['actor']['mlp_layers'],
             critic_mlp_layers=checkpoint['critic']['mlp_layers'],
@@ -361,6 +397,9 @@ class Actor(Estimator):
         action_probs = np.exp(log_action_probs)
         action_idx = np.random.choice(np.arange(self.num_actions), p = action_probs)
         greedy_action_idx = np.argmax(action_probs)
+        if DEBUG:
+            print(f"- Action probs: {action_probs}")
+            print(f"- Sampled/best action: {action_idx} / {greedy_action_idx}")
         return action_idx, greedy_action_idx
 
     def update(self, state_batch, action_batch, advantage_batch):
@@ -466,7 +505,7 @@ class MLPNetwork(nn.Module):
         # build the Q network
         layer_dims = [np.prod(self.state_shape)] + self.mlp_layers
         fc = [nn.Flatten()]
-        #fc.append(nn.BatchNorm1d(layer_dims[0]))
+        fc.append(nn.BatchNorm1d(layer_dims[0]))
         for i in range(len(layer_dims)-1):
             fc.append(nn.Linear(layer_dims[i], layer_dims[i+1], bias=True))
             fc.append(nn.Tanh())

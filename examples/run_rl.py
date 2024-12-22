@@ -47,6 +47,8 @@ def train(args):
             agent = DQNAgent(
                 num_actions=env.num_actions,
                 state_shape=env.state_shape[0],
+                pattern_shape=env.pattern_shape[0],
+                use_pattern=args.pattern,
                 mlp_layers=[64,64],
                 device=device,
                 save_path=args.log_dir,
@@ -61,6 +63,8 @@ def train(args):
             agent = NFSPAgent(
                 num_actions=env.num_actions,
                 state_shape=env.state_shape[0],
+                pattern_shape=env.pattern_shape[0],
+                use_pattern=args.pattern,
                 hidden_layers_sizes=[64,64],
                 q_mlp_layers=[64,64],
                 device=device,
@@ -76,6 +80,8 @@ def train(args):
             agent = A2CAgent(
                 num_actions=env.num_actions,
                 state_shape=env.state_shape[0],
+                pattern_shape=env.pattern_shape[0],
+                use_pattern=args.pattern,
                 actor_mlp_layers=[64,64],
                 critic_mlp_layers=[64,64],
                 device=device,
@@ -159,6 +165,12 @@ if __name__ == '__main__':
 
     parser.add_argument(
         '--self_play',
+        default=False,
+        action='store_true',
+    )
+
+    parser.add_argument(
+        '--pattern',
         default=False,
         action='store_true',
     )
